@@ -1,0 +1,56 @@
+package com.infoworld;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.http.HttpEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.ContentType;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import com.google.gson.Gson;
+
+public class ChatBot {
+    public static String sendQuery(String input, String endpoint, String apiKey) throws IOException, JSONException {
+        // Build input and API key params
+        StringEntity inputEntity = new StringEntity(input, ContentType.APPLICATION_JSON);
+        StringEntity apiKeyParam = new StringEntity(apiKey, ContentType.TEXT_PLAIN);
+        
+        // Build POST request
+        HttpPost post = new HttpPost(endpoint);
+        post.setEntity(inputEntity);
+        post.setHeader("Authorization", "Bearer " + apiKey);
+        post.setHeader("Content-Type", "application/json");
+        
+        // Send POST request and parse response
+        try (CloseableHttpClient httpClient = HttpClients.createDefault();
+                CloseableHttpResponse response = httpClient.execute(post)) {
+            HttpEntity resEntity = response.getEntity();
+            String resJsonString = new String(resEntity.getContent().readAllBytes(), StandardCharsets.UTF_8);
+            JSONObject resJson = new JSONObject(resJsonString);
+            
+            // Parse JSON response
+            JSONArray responseArray = resJson.getJSONArray("response");
+            List<String> responseList = new ArrayList<>();
+            for (int i = 0; i < responseArray.length(); i++) {
+                JSONObject responseObj = responseArray.getJSONObject(i);
+                String responseString = responseObj.getString("text");
+                responseList.add(responseString);
+            }
+            
+            // Convert response list to JSON and return it
+            Gson gson = new Gson();
+            String jsonResponse = gson.toJson(responseList);
+            return jsonResponse;
+        }
+    }
+}
+
